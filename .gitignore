@@ -1,0 +1,12 @@
+*.iso
+*.log
+*.shadow
+tmp/
+cache/
+repack_tmp/
+repack-tmp/
+test_root/
+venv/
+._*
+.claude/
+.idea/
