@@ -1,0 +1,33 @@
+# VibeOS Package Exclusion List
+# One package per line. Used by build.sh to shrink ISO size.
+
+# Large Font Collections (Specialized Scripts)
+google-noto-sans-symbols-vf-fonts
+google-noto-serif-kannada-vf-fonts
+google-noto-sans-arabic-vf-fonts
+google-noto-sans-telugu-vf-fonts
+google-noto-sans-oriya-vf-fonts
+google-noto-serif-oriya-vf-fonts
+google-noto-serif-tamil-vf-fonts
+google-noto-sans-kannada-vf-fonts
+google-noto-serif-gujarati-vf-fonts
+google-noto-serif-khmer-vf-fonts
+google-noto-sans-khmer-vf-fonts
+google-noto-sans-canadian-aboriginal-vf-fonts
+google-noto-sans-gujarati-vf-fonts
+
+# QEMU Block Drivers (Unlikely to be needed in Live ISO)
+qemu-block-gluster
+qemu-block-iscsi
+qemu-block-nfs
+qemu-block-rbd
+qemu-block-ssh
+qemu-block-curl
+qemu-block-blkio
+qemu-block-dmg
+
+# Debug/Development packages accidentally pulled in
+pkgconf
+pkgconf-pkg-config
+pkgconf-m4
+libpkgconf
