@@ -1,6 +1,8 @@
 *.iso
 *.log
 *.shadow
+.DS_Store
+.git.backup/
 tmp/
 cache/
 repack_tmp/
