@@ -1,0 +1,66 @@
+{
+  "_comment": "VibeOS Flatpak App Manifest — installed on first boot via vibeos-flatpak-init.service",
+
+  "profiles": {
+    "minimal": {
+      "apps": [
+        {
+          "id": "org.chromium.Chromium",
+          "name": "Chromium Browser",
+          "set_default_for": ["x-scheme-handler/http", "x-scheme-handler/https", "text/html"]
+        }
+      ]
+    },
+
+    "dev": {
+      "apps": [
+        {
+          "id": "org.chromium.Chromium",
+          "name": "Chromium Browser",
+          "set_default_for": ["x-scheme-handler/http", "x-scheme-handler/https", "text/html"]
+        },
+        {
+          "id": "com.visualstudio.code",
+          "name": "Visual Studio Code",
+          "set_default_for": ["text/plain", "application/x-shellscript"]
+        },
+        {
+          "id": "org.localsend.localsend_app",
+          "name": "LocalSend"
+        }
+      ]
+    },
+
+    "full": {
+      "apps": [
+        {
+          "id": "org.chromium.Chromium",
+          "name": "Chromium Browser",
+          "set_default_for": ["x-scheme-handler/http", "x-scheme-handler/https", "text/html"]
+        },
+        {
+          "id": "com.visualstudio.code",
+          "name": "Visual Studio Code",
+          "set_default_for": ["text/plain", "application/x-shellscript"]
+        },
+        {
+          "id": "org.videolan.VLC",
+          "name": "VLC Media Player",
+          "set_default_for": ["video/mp4", "video/x-matroska", "video/avi", "audio/mpeg", "audio/flac"]
+        },
+        {
+          "id": "org.localsend.localsend_app",
+          "name": "LocalSend"
+        },
+        {
+          "id": "io.github.Bavarder.Bavarder",
+          "name": "Bavarder AI"
+        },
+        {
+          "id": "org.libreoffice.LibreOffice",
+          "name": "LibreOffice"
+        }
+      ]
+    }
+  }
+}
