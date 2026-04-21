@@ -1,0 +1,226 @@
+# ============================================================
+# VibeOS CI/CD — Automated Multi-Arch ISO Build Pipeline
+# ============================================================
+# Triggers:
+#   - Push to main branch
+#   - Git tags matching v* (creates a GitHub Release)
+#   - Manual workflow dispatch with profile/arch selection
+# ============================================================
+
+name: Build VibeOS ISO
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'full'
+        type: choice
+        options: [full, minimal, dev]
+      arch:
+        description: 'Target architecture'
+        required: true
+        default: 'both'
+        type: choice
+        options: [both, x86_64, aarch64]
+
+env:
+  REGISTRY: ghcr.io
+  VERSION: "" # Set dynamically
+
+jobs:
+  # ==========================================================
+  # Step 1: Determine version
+  # ==========================================================
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_release: ${{ steps.version.outputs.is_release }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+          else
+            VERSION="$(date +%Y.%m).${GITHUB_RUN_NUMBER}"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "📦 Version: $VERSION"
+
+  # ==========================================================
+  # Step 2: Build ISOs (matrix strategy for multi-arch)
+  # ==========================================================
+  build:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: aarch64
+            runner: ubuntu-latest
+            platform: linux/arm64
+
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU (for cross-arch builds)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Resolve build profile
+        id: profile
+        run: |
+          PROFILE="${{ github.event.inputs.profile || 'full' }}"
+          echo "profile=$PROFILE" >> "$GITHUB_OUTPUT"
+
+      - name: Check if arch should build
+        id: should_build
+        run: |
+          REQUESTED="${{ github.event.inputs.arch || 'both' }}"
+          if [[ "$REQUESTED" == "both" || "$REQUESTED" == "${{ matrix.arch }}" ]]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build Docker builder image
+        if: steps.should_build.outputs.skip == 'false'
+        run: |
+          docker buildx build \
+            --platform ${{ matrix.platform }} \
+            -t vibeos-builder-${{ matrix.arch }} \
+            --load .
+
+      - name: Build ISO
+        if: steps.should_build.outputs.skip == 'false'
+        run: |
+          PROFILE="${{ steps.profile.outputs.profile }}"
+          ARCH="${{ matrix.arch }}"
+          KS_FILE="vibeos-${ARCH}"
+          [ "$PROFILE" != "full" ] && KS_FILE="${KS_FILE}-${PROFILE}"
+
+          docker run --rm --privileged \
+            --platform ${{ matrix.platform }} \
+            -v "${{ github.workspace }}:/workspace" \
+            vibeos-builder-${ARCH} \
+            bash -c "cd /workspace/kickstart \
+              && cp -v /workspace/live.py /workspace/creator.py /workspace/fs.py \
+                   /usr/lib/python3.12/site-packages/imgcreate/ \
+              && livecd-creator --verbose \
+                  --config=${KS_FILE}.ks \
+                  --fslabel=VibeOS_${ARCH} \
+                  --cache=/workspace/cache \
+              && mv *.iso /workspace/VibeOS-${ARCH}.iso"
+
+      - name: Generate checksums
+        if: steps.should_build.outputs.skip == 'false'
+        run: |
+          cd ${{ github.workspace }}
+          sha256sum VibeOS-${{ matrix.arch }}.iso > VibeOS-${{ matrix.arch }}.iso.sha256
+          echo "SHA256: $(cat VibeOS-${{ matrix.arch }}.iso.sha256)"
+
+      - name: Generate build metadata
+        if: steps.should_build.outputs.skip == 'false'
+        run: |
+          cat > VibeOS-${{ matrix.arch }}-build.json << METADATA
+          {
+            "name": "VibeOS",
+            "version": "${{ needs.version.outputs.version }}",
+            "arch": "${{ matrix.arch }}",
+            "profile": "${{ steps.profile.outputs.profile }}",
+            "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${{ github.sha }}",
+            "ref": "${{ github.ref }}",
+            "runner": "${{ matrix.runner }}",
+            "iso_size": "$(stat -c%s VibeOS-${{ matrix.arch }}.iso 2>/dev/null || echo 0)",
+            "sha256": "$(cat VibeOS-${{ matrix.arch }}.iso.sha256 | awk '{print $1}')"
+          }
+          METADATA
+
+      - name: Upload ISO artifact
+        if: steps.should_build.outputs.skip == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: VibeOS-${{ matrix.arch }}
+          path: |
+            VibeOS-${{ matrix.arch }}.iso
+            VibeOS-${{ matrix.arch }}.iso.sha256
+            VibeOS-${{ matrix.arch }}-build.json
+          retention-days: 14
+
+  # ==========================================================
+  # Step 3: Create GitHub Release (only on tags)
+  # ==========================================================
+  release:
+    needs: [version, build]
+    if: needs.version.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all ISO artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts/
+
+      - name: Prepare release notes
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          cat > release-notes.md << NOTES
+          # VibeOS v${VERSION}
+
+          ## Downloads
+
+          | Architecture | ISO | Checksum |
+          |-------------|-----|----------|
+          | x86_64 (Intel/AMD) | \`VibeOS-x86_64.iso\` | \`VibeOS-x86_64.iso.sha256\` |
+          | aarch64 (ARM64) | \`VibeOS-aarch64.iso\` | \`VibeOS-aarch64.iso.sha256\` |
+
+          ## Verify Download
+          \`\`\`bash
+          sha256sum -c VibeOS-x86_64.iso.sha256
+          \`\`\`
+
+          ## Flash to USB
+          \`\`\`bash
+          sudo dd if=VibeOS-x86_64.iso of=/dev/sdX bs=4M status=progress
+          \`\`\`
+          NOTES
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "VibeOS v${{ needs.version.outputs.version }}"
+          body_path: release-notes.md
+          files: |
+            release-artifacts/**/*.iso
+            release-artifacts/**/*.sha256
+            release-artifacts/**/*.json
+          draft: false
+          prerelease: ${{ contains(needs.version.outputs.version, 'rc') }}
