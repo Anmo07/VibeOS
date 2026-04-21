@@ -1,0 +1,103 @@
+name = "vibeos-minimal"
+description = "VibeOS Minimal Profile — Core system + UI only"
+version = "40.0.1"
+distro = "fedora-39"
+
+# --- Core System ---
+[[packages]]
+name = "zsh"
+[[packages]]
+name = "util-linux-user"
+[[packages]]
+name = "firewalld"
+[[packages]]
+name = "usbguard"
+[[packages]]
+name = "pam"
+[[packages]]
+name = "dconf"
+[[packages]]
+name = "gnome-text-editor"
+[[packages]]
+name = "file-roller"
+[[packages]]
+name = "gnome-disk-utility"
+[[packages]]
+name = "gnome-system-monitor"
+[[packages]]
+name = "gnome-control-center"
+[[packages]]
+name = "power-profiles-daemon"
+[[packages]]
+name = "NetworkManager-wifi"
+[[packages]]
+name = "NetworkManager-bluetooth"
+[[packages]]
+name = "nm-connection-editor"
+[[packages]]
+name = "wpa_supplicant"
+[[packages]]
+name = "bluez"
+[[packages]]
+name = "gnome-bluetooth"
+[[packages]]
+name = "cups"
+[[packages]]
+name = "gnome-software"
+[[packages]]
+name = "flatpak"
+[[packages]]
+name = "gnome-calculator"
+[[packages]]
+name = "keepassxc"
+[[packages]]
+name = "plymouth"
+[[packages]]
+name = "timeshift"
+
+# --- UI / UX ---
+[[packages]]
+name = "gnome-shell-extension-dash-to-dock"
+[[packages]]
+name = "gnome-shell-extension-appindicator"
+[[packages]]
+name = "gnome-shell-extension-blur-my-shell"
+[[packages]]
+name = "gnome-shell-extension-just-perfection"
+[[packages]]
+name = "la-capitaine-cursor-theme"
+[[packages]]
+name = "papirus-icon-theme"
+[[packages]]
+name = "materia-gtk-theme"
+[[packages]]
+name = "ulauncher"
+[[packages]]
+name = "gnome-tweaks"
+[[packages]]
+name = "google-noto-sans-fonts"
+
+# =============================================================
+# System Customizations
+# =============================================================
+[customizations]
+hostname = "vibeos"
+
+[customizations.kernel]
+append = "quiet splash"
+
+[[customizations.user]]
+name = "liveuser"
+shell = "/bin/zsh"
+groups = ["wheel"]
+
+[customizations.services]
+enabled = ["firewalld", "bluetooth", "power-profiles-daemon", "NetworkManager"]
+disabled = ["NetworkManager-wait-online", "sshd"]
+
+[customizations.timezone]
+timezone = "UTC"
+
+[customizations.locale]
+languages = ["en_US.UTF-8"]
+keyboard = "us"

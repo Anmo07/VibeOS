@@ -1,0 +1,226 @@
+# vibeos.yaml — rpm-ostree treefile for VibeOS Atomic Edition
+# This defines the OS composition for OSTree-based deployments.
+# Build with: rpm-ostree compose tree vibeos.yaml
+
+ref: vibeos/40/${basearch}/desktop
+
+rojig:
+  name: vibeos
+  summary: "VibeOS Desktop"
+  license: MIT
+
+repos:
+  - fedora-39
+  - fedora-39-updates
+  - rpmfusion-free
+  - rpmfusion-nonfree
+
+automatic-version-prefix: "40"
+mutate-os-release: "40"
+
+# Override Fedora branding
+releasever: "40"
+
+# Boot configuration
+boot-location: modules
+default-target: graphical.target
+
+# Base packages — immutable system layer
+packages:
+  # Desktop environment
+  - gnome-shell
+  - gnome-session-wayland-session
+  - gnome-terminal
+  - gnome-control-center
+  - gnome-settings-daemon
+  - gnome-disk-utility
+  - gnome-system-monitor
+  - gnome-software
+  - gnome-software-plugin-flatpak
+  - gnome-tweaks
+  - gnome-calculator
+  - gnome-calendar
+  - gnome-screenshot
+  - gnome-bluetooth
+  - gnome-power-manager
+  - nautilus
+  - sushi
+
+  # GNOME Extensions
+  - gnome-shell-extension-dash-to-dock
+  - gnome-shell-extension-user-theme
+  - gnome-shell-extension-blur-my-shell
+  - gnome-shell-extension-appindicator
+  - gnome-shell-extension-just-perfection
+  - gnome-shell-extension-tiling-assistant
+  - gnome-shell-extension-desktop-icons-ng
+  - gnome-shell-extension-gsconnect
+
+  # Theming
+  - la-capitaine-cursor-theme
+  - papirus-icon-theme
+  - materia-gtk-theme
+  - google-noto-sans-fonts
+  - mozilla-fira-sans-fonts
+  - google-noto-color-emoji-fonts
+
+  # System tools
+  - zsh
+  - util-linux-user
+  - flatpak
+  - dconf
+  - plymouth
+  - plymouth-scripts
+  - timeshift
+  - keepassxc
+  - ulauncher
+  - file-roller
+  - p7zip
+  - unrar
+
+  # Networking
+  - NetworkManager
+  - NetworkManager-wifi
+  - NetworkManager-bluetooth
+  - NetworkManager-wwan
+  - nm-connection-editor
+  - wpa_supplicant
+
+  # Bluetooth & audio
+  - bluez
+  - bluez-tools
+  - pipewire
+  - wireplumber
+
+  # Hardware support
+  - iwlwifi-dvm-firmware
+  - iwlwifi-mvm-firmware
+  - fprintd
+  - fprintd-pam
+  - power-profiles-daemon
+  - upower
+
+  # Printing
+  - cups
+  - system-config-printer
+
+  # Security
+  - firewalld
+  - usbguard
+
+  # Multimedia codecs
+  - gstreamer1-plugins-base
+  - gstreamer1-plugins-good
+  - gstreamer1-plugins-ugly
+  - gstreamer1-plugins-bad-free
+  - ffmpeg-free
+
+  # Virtualization
+  - open-vm-tools
+  - open-vm-tools-desktop
+
+  # Developer essentials (layered in base for dev profile)
+  - python3-pip
+  - pipx
+  - fd-find
+  - git
+  - curl
+  - jq
+  - zenity
+
+# Packages to remove from inherited sets
+packages-aarch64:
+  - grub2-efi-aa64
+  - shim-aa64
+  - grub2-efi-aa64-modules
+
+packages-x86_64:
+  - grub2-efi-x64
+  - shim-x64
+  - grub2-efi-x64-modules
+  - grub2-efi-x64-cdboot
+  - syslinux
+
+# Remove unwanted Fedora packages
+exclude-packages:
+  - fedora-logos
+  - fedora-release
+  - fedora-release-identity-basic
+
+# Post-processing scripts (run after RPM install, before commit)
+postprocess:
+  - |
+    #!/bin/bash
+    set -euo pipefail
+
+    # --- VibeOS Branding ---
+    cat > /usr/lib/os-release << 'OSRELEASE'
+    NAME="VibeOS"
+    VERSION="40 (Atomic Desktop)"
+    ID=vibeos
+    ID_LIKE=fedora
+    VERSION_ID=40
+    PLATFORM_ID="platform:f40"
+    PRETTY_NAME="VibeOS 40 (Atomic Desktop)"
+    ANSI_COLOR="0;38;2;60;110;180"
+    LOGO=vibeos-logo-icon
+    CPE_NAME="cpe:/o:vibeos:vibeos:40"
+    DEFAULT_HOSTNAME="vibeos"
+    OSRELEASE
+    ln -sf /usr/lib/os-release /etc/os-release
+
+    # --- Default shell ---
+    echo "/bin/zsh" >> /etc/shells
+
+    # --- Flathub ---
+    flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
+
+    # --- Disable slow services ---
+    systemctl disable NetworkManager-wait-online.service || true
+
+    # --- Enable essential services ---
+    systemctl enable firewalld || true
+    systemctl enable bluetooth || true
+    systemctl enable power-profiles-daemon || true
+
+    # --- dconf defaults ---
+    mkdir -p /etc/dconf/profile
+    cat > /etc/dconf/profile/user << 'DCONF'
+    user-db:user
+    system-db:local
+    DCONF
+
+    mkdir -p /etc/dconf/db/local.d
+    cat > /etc/dconf/db/local.d/99-vibeos << 'DCONF'
+    [org/gnome/shell]
+    enabled-extensions=['dash-to-dock@micxgx.gmail.com', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'blur-my-shell@aunetx', 'appindicatorsupport@rgcjonas.gmail.com', 'ding@rastersoft.com', 'tiling-assistant@s-ol.github.be']
+
+    [org/gnome/desktop/interface]
+    gtk-theme='Materia'
+    icon-theme='Papirus'
+    cursor-theme='La-Capitaine'
+    color-scheme='prefer-dark'
+    show-battery-percentage=true
+    font-name='Noto Sans 11'
+
+    [org/gnome/shell/extensions/dash-to-dock]
+    dock-position='BOTTOM'
+    extend-height=false
+    transparency-mode='DYNAMIC'
+
+    [org/gnome/desktop/wm/preferences]
+    button-layout='close,minimize,maximize:'
+
+    [org/gnome/desktop/peripherals/touchpad]
+    tap-to-click=true
+    natural-scroll=true
+    DCONF
+    dconf update
+
+    echo "VibeOS postprocess complete"
+
+# Documentation
+documentation: true
+
+# Composefs (fast boot, integrity checking)
+composefs: true

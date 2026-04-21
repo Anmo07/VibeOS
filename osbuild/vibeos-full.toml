@@ -1,0 +1,185 @@
+name = "vibeos-full"
+description = "VibeOS Full Profile — Complete desktop OS with all packages"
+version = "40.0.1"
+distro = "fedora-39"
+
+# =============================================================
+# Package Groups — mirrors kickstart/profiles/
+# =============================================================
+
+# --- Core System ---
+[[packages]]
+name = "zsh"
+[[packages]]
+name = "util-linux-user"
+[[packages]]
+name = "firewalld"
+[[packages]]
+name = "usbguard"
+[[packages]]
+name = "pam"
+[[packages]]
+name = "p7zip"
+[[packages]]
+name = "unrar"
+[[packages]]
+name = "dconf"
+[[packages]]
+name = "gnome-text-editor"
+[[packages]]
+name = "file-roller"
+[[packages]]
+name = "gnome-disk-utility"
+[[packages]]
+name = "gnome-system-monitor"
+[[packages]]
+name = "gnome-control-center"
+[[packages]]
+name = "gnome-power-manager"
+[[packages]]
+name = "power-profiles-daemon"
+[[packages]]
+name = "upower"
+[[packages]]
+name = "NetworkManager-wifi"
+[[packages]]
+name = "NetworkManager-bluetooth"
+[[packages]]
+name = "NetworkManager-wwan"
+[[packages]]
+name = "nm-connection-editor"
+[[packages]]
+name = "wpa_supplicant"
+[[packages]]
+name = "bluez"
+[[packages]]
+name = "bluez-tools"
+[[packages]]
+name = "gnome-bluetooth"
+[[packages]]
+name = "cups"
+[[packages]]
+name = "system-config-printer"
+[[packages]]
+name = "gnome-software"
+[[packages]]
+name = "flatpak"
+[[packages]]
+name = "gnome-screenshot"
+[[packages]]
+name = "gnome-calculator"
+[[packages]]
+name = "gnome-calendar"
+[[packages]]
+name = "keepassxc"
+[[packages]]
+name = "plymouth"
+[[packages]]
+name = "timeshift"
+
+# --- UI / UX ---
+[[packages]]
+name = "gnome-shell-extension-dash-to-dock"
+[[packages]]
+name = "gnome-shell-extension-appindicator"
+[[packages]]
+name = "gnome-shell-extension-blur-my-shell"
+[[packages]]
+name = "gnome-shell-extension-just-perfection"
+[[packages]]
+name = "gnome-shell-extension-tiling-assistant"
+[[packages]]
+name = "la-capitaine-cursor-theme"
+[[packages]]
+name = "papirus-icon-theme"
+[[packages]]
+name = "materia-gtk-theme"
+[[packages]]
+name = "ulauncher"
+[[packages]]
+name = "gnome-tweaks"
+[[packages]]
+name = "google-noto-sans-fonts"
+[[packages]]
+name = "mozilla-fira-sans-fonts"
+[[packages]]
+name = "google-noto-color-emoji-fonts"
+
+# --- Developer Tools ---
+[[packages]]
+name = "python3-pip"
+[[packages]]
+name = "pipx"
+[[packages]]
+name = "fd-find"
+[[packages]]
+name = "ImageMagick"
+
+# --- Media & Productivity ---
+[[packages]]
+name = "libreoffice-writer"
+[[packages]]
+name = "libreoffice-calc"
+[[packages]]
+name = "libreoffice-impress"
+[[packages]]
+name = "evince"
+[[packages]]
+name = "eog"
+[[packages]]
+name = "cheese"
+[[packages]]
+name = "thunderbird"
+[[packages]]
+name = "gstreamer1-plugins-base"
+[[packages]]
+name = "gstreamer1-plugins-good"
+
+# --- Hardware Support ---
+[[packages]]
+name = "open-vm-tools"
+[[packages]]
+name = "open-vm-tools-desktop"
+[[packages]]
+name = "iwlwifi-dvm-firmware"
+[[packages]]
+name = "iwlwifi-mvm-firmware"
+[[packages]]
+name = "fprintd"
+
+# =============================================================
+# System Customizations
+# =============================================================
+
+[customizations]
+hostname = "vibeos"
+
+[customizations.kernel]
+append = "quiet splash"
+
+# Default user for the live session
+[[customizations.user]]
+name = "liveuser"
+shell = "/bin/zsh"
+groups = ["wheel"]
+
+# Enable essential services
+[customizations.services]
+enabled = ["firewalld", "bluetooth", "power-profiles-daemon", "NetworkManager"]
+disabled = ["NetworkManager-wait-online", "sshd"]
+
+# Timezone
+[customizations.timezone]
+timezone = "UTC"
+
+# Locale
+[customizations.locale]
+languages = ["en_US.UTF-8"]
+keyboard = "us"
+
+# Firewall
+[customizations.firewall]
+ports = []
+
+[customizations.firewall.services]
+enabled = ["dhcpv6-client", "mdns", "ssh"]
